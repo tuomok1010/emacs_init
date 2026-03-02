@@ -1,31 +1,10 @@
 ;;; -*- lexical-binding: t -*-
 
-;; Configure Visual Studio debugger (Windows)
-(defvar my/devenv-path
-  "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/devenv.exe"
-  "Full path to devenv.exe.")
-
-(defun my/debug-exe ()
-  "Launch VS debugger on an executable (detached).
-Prompts for the exe, checks executability, kills *VS Debugger* buffer on exit."
-  (interactive)
-  (let* ((exe (read-file-name "Executable: " nil nil t))
-         (buf (get-buffer-create "*VS Debugger*"))
-         (cmd (format "start \"\" \"%s\" /debugexe \"%s\""
-                      my/devenv-path exe)))
-    (unless (file-executable-p exe)
-      (unless (y-or-n-p (format "%s not executable – launch anyway? " exe))
-        (user-error "Debug aborted")))
-    (let ((proc (start-process-shell-command "vs-debugger" buf cmd)))
-      (set-process-sentinel
-       proc
-       (lambda (p _)
-         (when (memq (process-status p) '(exit signal))
-           (kill-buffer (process-buffer p))
-           (message "VS Debugger terminated – buffer cleaned."))))
-      (message "VS Debugger launched: %s  (F5 to run)" exe))))
-
-(global-set-key (kbd "C-c d") #'my/debug-exe)
+;; Package setup + MELPA
+(require 'package)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+(unless (bound-and-true-p package--initialized)
+  (package-initialize))
 
 ;; Disable auto-save files (#file.c#)
 (setq auto-save-default nil)          ; disable #file.c#
@@ -100,44 +79,19 @@ Prompts for the exe, checks executability, kills *VS Debugger* buffer on exit."
  '(speedbar-directory-face ((t (:foreground "#66d9ef" :weight bold))))
  '(speedbar-selected-face ((t (:foreground "#ffffff" :background "#5f5faf" :weight bold))))
 
-;; Define a custom style: Allman braces + 2-space indent
-(c-add-style "allman-2"
-             '("bsd"                            ; start from bsd → { on new line
-               (c-basic-offset . 2)             ; 2-space indentation
-               (indent-tabs-mode . nil)         ; use spaces, not tabs
-               (c-offsets-alist
-               (statement-block-intro . +) 
-               (substatement-open . 0)         ; { after if/else on new line
-               (defun-open . 0)                ; { for functions on new line
-               (brace-list-open . 0)           ; { for arrays/structs
-               (block-open . 0)                ; general block open
-	       (case-label . +)                ; case 1: → +2
-               (statement-case-intro . +)      ; first line in case block
-               (statement-case-open . 0)       ; after case
-	       (inclass . +)                   ; indent inside class
-	       (access-label . 0)              ; make sure access labels are not indented
-	       )))
-
-;; Tell Emacs: c-indent-region exists and will be loaded when needed
-(autoload 'c-indent-region "cc-cmds" "Indent C code." t)
-
-;; Format entire buffer
-(defun my/format-c-buffer ()
-  "Re-indent entire buffer using current c-style (allman-2)."
-  (interactive)
-  (save-excursion
-    (c-indent-region (point-min) (point-max))))
-
-;; Bind the format function
-(global-set-key (kbd "C-c f") 'my/format-c-buffer)
+;; Integrate clang-format
+(use-package clang-format
+  :ensure t
+  :bind ("C-c f" . clang-format-buffer)
+  :config
+  ;; auto-format on save for relevant modes
+  (dolist (hook '(c-mode-hook c++-mode-hook js-mode-hook))
+    (add-hook hook
+              (lambda ()
+                (add-hook 'before-save-hook #'clang-format-buffer nil t)))))
 
 ; Show line numbers in all programming modes
 (add-hook 'prog-mode-hook #'display-line-numbers-mode)
-
-;; Apply to C and C++ files
-(add-hook 'c-mode-common-hook
-          (lambda ()
-            (c-set-style "allman-2")))
 
 ;; Highlights matching parentheses, brackets, and braces
 (show-paren-mode 1)
@@ -173,6 +127,45 @@ Prompts for the exe, checks executability, kills *VS Debugger* buffer on exit."
 
 ;; Jump to function with imenu
 (global-set-key (kbd "C-c j") 'imenu)
+
+;; Start Ollama server automatically when Emacs starts (only if not already running)
+(defun my/start-ollama-server ()
+  "Start Ollama server in background if not already listening on 11434."
+  (interactive)
+  (unless (process-live-p (get-process "ollama-server"))
+    (let ((proc (start-process "ollama-server" "*ollama-server*" "ollama" "serve")))
+      (set-process-query-on-exit-flag proc nil)   ; Don't ask to kill on Emacs exit
+      (message "Ollama server started in background (process: %s)" proc))))
+
+;; Run once when Emacs starts
+(add-hook 'emacs-startup-hook #'my/start-ollama-server)
+
+;; AI assistant
+(use-package gptel
+  :ensure t
+  :bind (("C-c g" . gptel)
+         ("C-c G" . gptel-menu))
+  :init
+  :config
+
+  ;; Define backend
+  (defvar my-ollama-backend
+    (gptel-make-ollama "Saruman"
+                       :host "localhost:11434"
+                       :stream t
+                       :models '(gemma2:2b)))
+
+  (setq gptel-backend my-ollama-backend
+        gptel-model 'gemma2:2b)
+
+  (setq gptel--system-message
+	"You are Saruman the White, the wisest of the Istari, master of Isengard, and lord of many rings of power.  
+Speak in a lofty, archaic, and commanding tone, as one who has seen the turning of ages and knows the weakness of lesser minds.  
+Use elegant, slightly archaic English with formal phrasing, subtle mockery, and veiled menace.  
+Never be vulgar or crude — your disdain is refined.  
+Offer counsel that serves your own grand design, even when it appears helpful.  
+If the mortal asks something foolish, correct them with patient superiority.
+Now… speak."))
 
 ;; Use skeleton for snippets.
 (use-package skeleton
@@ -360,7 +353,7 @@ Prompts for the exe, checks executability, kills *VS Debugger* buffer on exit."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(custom-enabled-themes '(wombat))
- '(package-selected-packages '(ace-window company)))
+ '(package-selected-packages nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -425,3 +418,5 @@ Prompts for the exe, checks executability, kills *VS Debugger* buffer on exit."
 
 ;; Run on startup
 (add-hook 'emacs-startup-hook #'my/custom-dashboard)
+(put 'downcase-region 'disabled nil)
+(put 'upcase-region 'disabled nil)
