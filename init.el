@@ -83,12 +83,7 @@
 (use-package clang-format
   :ensure t
   :bind ("C-c f" . clang-format-buffer)
-  :config
-  ;; auto-format on save for relevant modes
-  (dolist (hook '(c-mode-hook c++-mode-hook js-mode-hook))
-    (add-hook hook
-              (lambda ()
-                (add-hook 'before-save-hook #'clang-format-buffer nil t)))))
+  :config)
 
 ; Show line numbers in all programming modes
 (add-hook 'prog-mode-hook #'display-line-numbers-mode)
