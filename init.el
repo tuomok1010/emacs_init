@@ -48,36 +48,47 @@
 
 ;; Use speedbar as a file explorer
 (use-package speedbar
-  :ensure nil ;; Built-in, no need to install
-  :bind (("C-x t t" . speedbar) ("C-x t y" . speedbar-get-focus))
+  :ensure nil
+  :bind (("C-c C-s" . speedbar-get-focus)
+         ("C-c C-S" . speedbar))
   :config
-  (require 'speedbar)
   (setq speedbar-frame-parameters
-        `((width . 30)                                       ;; Fixed width
-          (height . ,(window-text-height (selected-window))) ;; Initially set to the height of the text area
-	  (left-fringe . 10)
-	  (right-fringe . 10)
-	  (internal-border-width . 0)
-          (parent-frame . ,(selected-frame))                 ;; Set as child of main frame
-	  (keep-ratio . t)                                   ;; Ensure resizing with the parent
-          (minibuffer . nil)                                 ;; No minibuffer
-          (unsplittable . t)                                 ;; Prevent splitting
-	  (name . "File Explorer")                           ;; Give it a nice name
-          (menu-bar-lines . 0)))                             ;; Disable menu bar
-  (setq speedbar-directory-unshown-regexp "^\\(CVS\\|RCS\\|SCCS\\|\\.\\.*\\)$")
-  (setq speedbar-update-flag t)
-  (setq speedbar-use-imenu-flag t) ;; Use imenu for C/C++ tags
-  (setq speedbar-tag-hierarchy-method '(speedbar-prefix-group-tag-hierarchy))
-  (setq speedbar-show-unknown-files t) ;; Highlight current function in speedbar
-  (speedbar-add-supported-extension '(".c" ".cpp" ".h" ".hpp"))
-  (with-eval-after-load 'ace-window
-    (add-to-list 'aw-ignored-buffers 'speedbar-mode)))
+        '((min-width . 30)
+          (width . 30)
+          (min-height . 0.4)
+          (height . 0.4)
+          (left-fringe . 0)
+          (right-fringe . 0)
+          (vertical-scroll-bar . nil)
+          (horizontal-scroll-bar . nil)
+          (unsplittable . t)
+          (menu-bar-lines . 0)
+          (tool-bar-lines . 0)))
 
- ;; Customize speedbar
- '(speedbar-button-face ((t (:foreground "#00ff00" :weight bold))))
- '(speedbar-file-face ((t (:foreground "#ffffff" :background "#3c3c3c"))))
- '(speedbar-directory-face ((t (:foreground "#66d9ef" :weight bold))))
- '(speedbar-selected-face ((t (:foreground "#ffffff" :background "#5f5faf" :weight bold))))
+  (setq speedbar-use-images t)
+  (setq speedbar-tag-hierarchy-method nil)
+  (setq speedbar-update-flag t)
+  (setq speedbar-use-imenu-flag t)
+  (setq speedbar-show-unknown-files t)
+
+  ;; Supported extensions
+  (speedbar-add-supported-extension
+   '(".c" ".cpp" ".h" ".hpp" ".js" ".ts" ".tsx" ".el" ".py" ".go" ".rs"))
+
+  ;; Auto-open in projects
+  (add-hook 'find-file-hook
+            (lambda ()
+              (when (and (buffer-file-name)
+                         (vc-backend (buffer-file-name))
+                         (not (get-buffer "*Speedbar*")))
+                (speedbar 1))))
+
+  ;; Faces (adjust colors to your theme)
+  (custom-set-faces
+   '(speedbar-directory-face ((t (:foreground "#8be9fd" :weight bold))))
+   '(speedbar-file-face ((t (:foreground "#f8f8f2"))))
+   '(speedbar-selected-face ((t (:foreground "#ff79c6" :weight bold :underline t))))
+   '(speedbar-tag-face ((t (:foreground "#50fa7b"))))))
 
 ;; Integrate clang-format
 (use-package clang-format
@@ -97,25 +108,56 @@
 ; Show current function in mode-line
 (which-function-mode 1)
 
-;; Company mode for autocompletion
 (use-package company
   :ensure t
-  :hook (prog-mode . company-mode))
+  :hook (prog-mode . company-mode)
+  :config
+  (setq company-idle-delay 0.1            ; faster popup
+        company-minimum-prefix-length 1
+        company-tooltip-align-annotations t
+        company-tooltip-limit 12
+        company-selection-wrap-around t
+        company-dabbrev-downcase nil
+        company-dabbrev-ignore-case t
+        company-dabbrev-code-ignore-case t
+        company-show-quick-access t))     ; numbers for quick select
 
 ;; Set up flymake for syntax checks
 (use-package flymake
   :hook (prog-mode . flymake-mode)
   :config
-  (setq flymake-no-changes-timeout 0.5) ;; Faster diagnostics
-  (setq flymake-fringe-indicator-position 'left-fringe))
+  (setq flymake-no-changes-timeout 0.3
+        flymake-fringe-indicator-position 'left-fringe
+        flymake-error-bitmap 'flymake-double-arrow-fringe-bitmap))
 
-;; Configure eglot for C/C++
+;; Configure eglot for C/C++, JavaScript
 (use-package eglot
   :ensure t
-  :hook ((c-mode c++-mode) . eglot-ensure)
+  :hook
+  ;; Auto-start Eglot in these modes
+  ((c-mode c++-mode
+    js-mode js-ts-mode
+    typescript-mode typescript-ts-mode
+    tsx-ts-mode) . eglot-ensure)
+
   :config
+  ;; ── C / C++ server ──
   (add-to-list 'eglot-server-programs
-               '((c-mode c++-mode) . ("clangd" "--background-index" "--clang-tidy"))))
+               '((c-mode c++-mode)
+                 . ("clangd" "--background-index" "--clang-tidy")))
+
+  ;; ── JavaScript / TypeScript server ──
+  (add-to-list 'eglot-server-programs
+               '((js-mode js-ts-mode
+                  typescript-mode typescript-ts-mode
+                  tsx-ts-mode)
+                 . ("typescript-language-server" "--stdio")))
+
+  ;; Optional: shared Eglot settings (faster startup, cleaner logs)
+  (setq eglot-autoshutdown t
+        eglot-events-buffer-size 2000000
+        eglot-ignored-server-capabilities
+        '(:documentHighlightProvider :foldingRangeProvider)))
 
 ;; Shorthand for compiling
 (global-set-key (kbd "C-c c") 'compile)
@@ -356,8 +398,77 @@ Now… speak."))
  ;; If there is more than one, they won't work right.
  )
 
-;; !!!!!!!!!!!!! FROM THIS POINT DOWNWARDS, IT'S ALL ABOUT THE CONFIG OF THE DASHBOARD !!!!!!!!!!!!!!!!!!!
+;; Create a function for creating a .clang-format file
+(defun my/create-clang-format-file ()
+  "Create a .clang-format file with Allman + 2-space style.
+Prompts for directory (defaults to current buffer's directory or default-directory)."
+  (interactive)
+  (let* ((default-dir
+          (or (when (buffer-file-name) (file-name-directory (buffer-file-name)))
+              default-directory
+              "~/"))
+         (target-dir
+          (read-directory-name "Create .clang-format in directory: "
+                               default-dir default-dir t))
+         (target-file (expand-file-name ".clang-format" target-dir)))
 
+    ;; Warn if file already exists
+    (when (file-exists-p target-file)
+      (unless (y-or-n-p (format "File %s already exists. Overwrite? " target-file))
+        (user-error "Aborted")))
+
+    ;; Write the file
+    (with-temp-file target-file
+      (insert "---
+# Start from LLVM (most neutral/flexible base, no \"BSD\" exists)
+BasedOnStyle: LLVM
+
+# Core indentation (matches c-basic-offset . 2)
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+
+# Allman brace style: opening brace ALWAYS on new line
+# This is the key replacement for your substatement-open . 0 / defun-open . 0 etc.
+BreakBeforeBraces: Allman
+
+# Case labels indented +2 (matches case-label . + / statement-case-intro . +)
+IndentCaseLabels: true
+
+# Access modifiers (public:, private:, protected:) - no extra indent
+# (matches access-label . 0)
+AccessModifierOffset: 0
+
+# Inside class members indented normally (matches inclass . +)
+# LLVM + Allman already handles this well
+IndentAccessModifiers: false   # keeps public:/private: at class level
+
+# Don't collapse short blocks/functions (cleaner for Allman)
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortLambdasOnASingleLine: All
+
+# Other useful defaults (adjust freely)
+ColumnLimit: 64                # or 0 for unlimited
+PointerAlignment: Left         # or Right / Middle - your preference
+ReferenceAlignment: Pointer    # usually good with Left pointers
+SortIncludes: false            # avoids unwanted reordering
+
+# Optional JS-specific section (clang-format applies same brace/indent rules)
+# ---
+# Language: JavaScript
+# ColumnLimit: 100
+"))
+
+    (message "Created .clang-format in %s" target-dir)
+
+    ;; Optional: offer to open it
+    (when (y-or-n-p "Open the new .clang-format file? ")
+      (find-file target-file))))
+
+(global-set-key (kbd "C-c C-f") 'my/create-clang-format-file)
+
+;; !!!!!!!!!!!!! FROM THIS POINT DOWNWARDS, IT'S ALL ABOUT THE CONFIG OF THE DASHBOARD !!!!!!!!!!!!!!!!!!!
 (recentf-mode 1)
 (setq recentf-max-saved-items 100)
 
