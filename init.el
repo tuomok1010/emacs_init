@@ -83,7 +83,7 @@
                          (not (get-buffer "*Speedbar*")))
                 (speedbar 1))))
 
-  ;; Faces (adjust colors to your theme)
+  ;; Faces
   (custom-set-faces
    '(speedbar-directory-face ((t (:foreground "#8be9fd" :weight bold))))
    '(speedbar-file-face ((t (:foreground "#f8f8f2"))))
@@ -122,6 +122,28 @@
         company-dabbrev-code-ignore-case t
         company-show-quick-access t))     ; numbers for quick select
 
+;; ── web-mode for HTML + embedded JS templates (EJS, ERB, etc.) ──
+(use-package web-mode
+  :ensure t
+  :mode
+  ("\\.ejs\\'" . web-mode)
+  ("\\.mjs\\'" . web-mode)
+  :config
+  (setq web-mode-engines-alist
+        (cons '("ejs" . "\\.ejs\\'") web-mode-engines-alist))
+
+  ;; Tell web-mode that .mjs files contain only JavaScript code
+  (add-to-list 'web-mode-content-types-alist '("javascript" . "\\.mjs\\'"))
+
+  (setq web-mode-markup-indent-offset 2      ; HTML
+        web-mode-code-indent-offset    2      ; JS / script
+        web-mode-css-indent-offset     2)
+
+  (setq web-mode-enable-auto-pairing t
+        web-mode-enable-auto-closing t
+        web-mode-enable-auto-opening   nil
+        web-mode-enable-current-element-highlight t))
+
 ;; Set up flymake for syntax checks
 (use-package flymake
   :hook (prog-mode . flymake-mode)
@@ -138,19 +160,25 @@
   ((c-mode c++-mode
     js-mode js-ts-mode
     typescript-mode typescript-ts-mode
-    tsx-ts-mode) . eglot-ensure)
+    tsx-ts-mode
+    web-mode) . eglot-ensure)
 
   :config
-  ;; ── C / C++ server ──
+  ;; C / C++ server
   (add-to-list 'eglot-server-programs
                '((c-mode c++-mode)
                  . ("clangd" "--background-index" "--clang-tidy")))
 
-  ;; ── JavaScript / TypeScript server ──
+  ;; JavaScript / TypeScript server
   (add-to-list 'eglot-server-programs
                '((js-mode js-ts-mode
-                  typescript-mode typescript-ts-mode
-                  tsx-ts-mode)
+			  typescript-mode typescript-ts-mode
+			  tsx-ts-mode)
+                 . ("typescript-language-server" "--stdio")))
+  
+  ;; web-mode / EJS
+  (add-to-list 'eglot-server-programs
+               '((web-mode :language-id "javascript")
                  . ("typescript-language-server" "--stdio")))
 
   ;; Optional: shared Eglot settings (faster startup, cleaner logs)
