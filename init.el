@@ -90,6 +90,31 @@
    '(speedbar-selected-face ((t (:foreground "#ff79c6" :weight bold :underline t))))
    '(speedbar-tag-face ((t (:foreground "#50fa7b"))))))
 
+(use-package dashboard
+  :ensure t
+  :config
+  (setq dashboard-startup-banner 'logo          ; or 'nil or a path to your own image/ascii
+        dashboard-center-content t
+        dashboard-show-shortcuts t
+        dashboard-set-init-info t
+        dashboard-set-file-icons t              ; needs all-the-icons
+        dashboard-set-navigator-buttons t
+
+        dashboard-items '((recents   . 8)
+                          (projects  . 5)
+                          (agenda    . 5)       ; if you use org-agenda
+                          (bookmarks . 5)))
+
+  ;; Set the title
+  (setq dashboard-banner-logo-title "Welcome to Emacs.")
+
+  (setq dashboard-footer-messages '("Speak friend and enter."))
+
+  ;; Optional: keep your centered header idea as custom banner
+  ;; (setq dashboard-startup-banner "/path/to/your-big-art.txt")
+
+  (dashboard-setup-startup-hook))
+
 ;; Integrate clang-format
 (use-package clang-format
   :ensure t
@@ -102,11 +127,20 @@
 ;; Highlights matching parentheses, brackets, and braces
 (show-paren-mode 1)
 
-; Off-screen parentheses in echo area
+;; Off-screen parentheses in echo area
 (setq show-paren-style 'mixed)
 
-; Show current function in mode-line
+;; Show current function in mode-line
 (which-function-mode 1)
+
+;; Main code font
+(set-frame-font "Cascadia Code" nil t)
+
+;; Fancy font for comments
+(custom-set-faces
+ '(font-lock-comment-face
+   ((t (:family "Lucida Fax"
+		:slant italic)))))
 
 (use-package company
   :ensure t
@@ -410,7 +444,7 @@ Now… speak."))
 	 _ "\n"   ; ← Cursor goes here!
 	 "\n"
 	 "#endif /* " ,guard "_H */\n"))))
-)
+  )
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -448,30 +482,28 @@ Prompts for directory (defaults to current buffer's directory or default-directo
     ;; Write the file
     (with-temp-file target-file
       (insert "---
-# Start from LLVM (most neutral/flexible base, no \"BSD\" exists)
+# Start from LLVM
 BasedOnStyle: LLVM
 
-# Core indentation (matches c-basic-offset . 2)
+# Core indentation
 IndentWidth: 2
 TabWidth: 2
 UseTab: Never
+ContinuationIndentWidth: 2
 
 # Allman brace style: opening brace ALWAYS on new line
-# This is the key replacement for your substatement-open . 0 / defun-open . 0 etc.
 BreakBeforeBraces: Allman
 
-# Case labels indented +2 (matches case-label . + / statement-case-intro . +)
+# Case labels indented +2
 IndentCaseLabels: true
 
-# Access modifiers (public:, private:, protected:) - no extra indent
-# (matches access-label . 0)
+# Access modifiers (public:, private:, protected:)
 AccessModifierOffset: 0
 
-# Inside class members indented normally (matches inclass . +)
-# LLVM + Allman already handles this well
+# Inside class members
 IndentAccessModifiers: false   # keeps public:/private: at class level
 
-# Don't collapse short blocks/functions (cleaner for Allman)
+# Don't collapse short blocks/functions
 AllowShortBlocksOnASingleLine: false
 AllowShortFunctionsOnASingleLine: None
 AllowShortLambdasOnASingleLine: All
@@ -481,11 +513,6 @@ ColumnLimit: 64                # or 0 for unlimited
 PointerAlignment: Left         # or Right / Middle - your preference
 ReferenceAlignment: Pointer    # usually good with Left pointers
 SortIncludes: false            # avoids unwanted reordering
-
-# Optional JS-specific section (clang-format applies same brace/indent rules)
-# ---
-# Language: JavaScript
-# ColumnLimit: 100
 "))
 
     (message "Created .clang-format in %s" target-dir)
@@ -495,103 +522,3 @@ SortIncludes: false            # avoids unwanted reordering
       (find-file target-file))))
 
 (global-set-key (kbd "C-c C-f") 'my/create-clang-format-file)
-
-;; !!!!!!!!!!!!! FROM THIS POINT DOWNWARDS, IT'S ALL ABOUT THE CONFIG OF THE DASHBOARD !!!!!!!!!!!!!!!!!!!
-(recentf-mode 1)
-(setq recentf-max-saved-items 100)
-
-;; Centering & Wrapping
-(defun my/center-text (text width)
-  "Center TEXT in WIDTH."
-  (let ((padding (max 0 (/ (- width (string-width text)) 2))))
-    (concat (make-string padding ?\s) text)))
-
-;; Header
-(defun my/dashboard-insert-header (width)
-  "Insert massive block-art 'EMACS EDITOR' header."
-  (let ((art-lines '(                                                                             
-"                                                                                                  "
-"  ▄▄▄              ▄▄                                           ▄▄▄▄▄▄▄                           "
-" █▀██  ██  ██▀▀     ██                              █▄         █▀██▀▀▀                            "
-"   ██  ██  ██       ██             ▄               ▄██▄          ██     ▄                         "
-"   ██  ██  ██ ▄█▀█▄ ██ ▄███▀ ▄███▄ ███▄███▄ ▄█▀█▄   ██ ▄███▄     ████   ███▄███▄ ▄▀▀█▄ ▄███▀ ▄██▀█"
-"   ██▄ ██▄ ██ ██▄█▀ ██ ██    ██ ██ ██ ██ ██ ██▄█▀   ██ ██ ██     ██     ██ ██ ██ ▄█▀██ ██    ▀███▄"
-"   ▀████▀███▀▄▀█▄▄▄▄██▄▀███▄▄▀███▀▄██ ██ ▀█▄▀█▄▄▄  ▄██▄▀███▀     ▀█████▄██ ██ ▀█▄█▄██▄▀███▄█▄▄██▀ "
-"                                                                                                  "
-"                     ┌─┐┌─┐┌─┐┌─┐┬┌─  ┌─┐┬─┐┬┌─┐┌┐┌┌┬┐  ┌─┐┌┐┌┌┬┐  ┌─┐┌┐┌┌┬┐┌─┐┬─┐                "
-"                     └─┐├─┘├┤ ├─┤├┴┐  ├┤ ├┬┘│├┤ │││ ││  ├─┤│││ ││  ├┤ │││ │ ├┤ ├┬┘                "
-"                     └─┘┴  └─┘┴ ┴┴ ┴  └  ┴└─┴└─┘┘└┘─┴┘  ┴ ┴┘└┘─┴┘  └─┘┘└┘ ┴ └─┘┴└─                "
-"                           _             _,-----------._        ___                               "
-"                          (_,.-      _,-'_,-----------._`-._    _)_)                              "
-"                             |     ,'_,-'  ___________  `-._`.                                    "
-"                            `'   ,','  _,-'___________`-._  `.`.                                  "
-"                               ,','  ,'_,-'     .     `-._`.  `.`.                                "  
-"                              /,'  ,','        >|<        `.`.  `.\\                              "
-"                             //  ,','      ><  ,^.  ><      `.`.  \\\\                            "
-"                            //  /,'      ><   / | \\   ><      `.\\  \\\\                         "
-"                           //  //      ><    \\/^\\\\/    ><       \\\\  \\\\                     "
-"                          ;;  ;;              `---'              ::  ::                           "
-"                          ||  ||              (____              ||  ||                           "
-"                         _||__||_            ,'----.            _||__||_                          "
-"                        (o.____.o)____        `---'        ____(o.____.o)                         "
-"                          |    | /,--.)                   (,--.\\ |    |                          "
-"                          |    |((  -`___               ___`   ))|    |                           "
-"                          |    | \\\\,'',  `.           .'  .``.// |    |                         "
-"                          |    |  // (___,'.         .'.___) \\\\  |    |                         "
-"                         /|    | ;;))  ____) .     . (____  ((\\\\ |    |\\                       "
-"                         \\|.__ | ||/ .'.--.\\/       `/,--.`. \\;: | __,|;                       "
-"                          |`-,`;.| :/ /,'  `)-'   `-('  `.\\ \\: |.;',-'|                         "
-"                          |   `..  ' / \\__.'         `.__/ \\ `  ,.'   |                         "
-"                          |    |,\\  /,                     ,\\  /,|    |                         "
-"                          |    ||: : )          .          ( : :||    |                           "
-"                         /|    |:; |/  .      ./|\\,      ,  \\| :;|    |\\                       "
-"                         \\|.__ |/  :  ,/-    <--:-->    ,\\.  ;  \\| __,|;                       "
-"                          |`-.``:   `'/-.     '\\|/ `     ,-\\`;   ;'',-'|                        "
-"                          |   `..   ,' `'       '       `  `.   ,.'   |                           "
-"                          |    ||  :                         :  ||    |                           "
-"                          |    ||  |                         |  ||    |                           "
-"                          |    ||  |                         |  ||    |                           "
-"                          |    |'  |            _            |  `|    |                           "
-"                          |    |   |          '|))           |   |    |                           "
-"                          ;____:   `._        `'           _,'   ;____:                           "
-"                         {______}     \\___________________/     {______}                         "
-"                         |______|_______________________________|______|                          "
-"                          Doors of Durin Ascii art by Sebastian Stoecker                          "
-                     )))
-    (dolist (line art-lines)
-      (insert (propertize (my/center-text line width)
-                          'face '(:height 1.4 :weight ultra-bold)))
-      (insert "\n"))
-    (insert "\n\n\n")))  ; Extra spacing below
-
-;; Recent Files
-(defun my/dashboard-insert-files (width)
-  "Insert Recent Files — one per line."
-  (let ((header (my/center-text "══════════ ✦ ✦  Recent Files   ✦ ✦ ══════════" width)))
-    (insert (propertize (concat header "\n\n") 'face '(:height 1.3 :weight bold)))
-    (dolist (file (seq-take recentf-list 5))
-      (when (file-exists-p file)
-        (let* ((display-name (abbreviate-file-name file))
-               (centered (my/center-text (concat "• " display-name) width)))
-          (insert-text-button centered
-                              'action (lambda (_) (find-file file))
-                              'follow-link t
-                              'face '(:foreground "#66d9ef" :underline t))
-          (insert "\n\n"))))))
-
-;; Main Dashboard
-(defun my/custom-dashboard ()
-  "Create the ultimate dashboard."
-  (with-current-buffer (get-buffer-create "*scratch*")
-    (let ((inhibit-read-only t)
-          (width (frame-width)))
-      (erase-buffer)
-      (my/dashboard-insert-header width)
-      (my/dashboard-insert-files width)
-      (goto-char (point-min))
-      (setq buffer-read-only t))))
-
-;; Run on startup
-(add-hook 'emacs-startup-hook #'my/custom-dashboard)
-(put 'downcase-region 'disabled nil)
-(put 'upcase-region 'disabled nil)
