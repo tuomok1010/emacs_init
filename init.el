@@ -90,6 +90,60 @@
    '(speedbar-selected-face ((t (:foreground "#ff79c6" :weight bold :underline t))))
    '(speedbar-tag-face ((t (:foreground "#50fa7b"))))))
 
+(defun make-doors-of-durin-ascii-art-file (&optional filename)
+  "Create a file containing the doors of durin ASCII art with doubled backslashes."
+  (interactive "FOutput file name: ")
+  
+  ;; Default filename if none provided
+  (unless (and filename (not (string-empty-p filename)))
+    (setq filename (expand-file-name "~/doors_of_durin.txt")))
+  
+  (with-temp-file filename
+    (insert "   _             _,-----------._        ___\n")
+    (insert "  (_,.-      _,-'_,-----------._`-._    _)_)\n")
+    (insert "     |     ,'_,-'  ___________  `-._`.\n")
+    (insert "    `'   ,','  _,-'___________`-._  `.`.\n")
+    (insert "       ,','  ,'_,-'     .     `-._`.  `.`.\n")
+    (insert "      /,'  ,','        >|<        `.`.  `.\\\n")
+    (insert "     //  ,','      ><  ,^.  ><      `.`.  \\\\\n")
+    (insert "    //  /,'      ><   / | \\   ><      `.\\  \\\\\n")
+    (insert "   //  //      ><    \\/\\^/\\/    ><      \\\\  \\\\\n")
+    (insert "  ;;  ;;              `---'              ::  ::\n")
+    (insert "  ||  ||              (____              ||  ||\n")
+    (insert " _||__||_            ,'----.            _||__||_\n")
+    (insert "(o.____.o)____        `---'        ____(o.____.o)\n")
+    (insert "  |    | /,--.)                   (,--.\\ |    |\n")
+    (insert "  |    |((  -`___               ___`   ))|    |\n")
+    (insert "  |    | \\\\,'',  `.           .'  .``.// |    |\n")
+    (insert "  |    |  // (___,'.         .'.___) \\\\  |    |\n")
+    (insert " /|    | ;;))  ____) .     . (____  ((\\\\ |    |\\\n")
+    (insert " \\|.__ | ||/ .'.--.\\/       `/,--.`. \\;: | __,|;\n")
+    (insert "  |`-,`;.| :/ /,'  `)-'   `-('  `.\\ \\: |.;',-'|\n")
+    (insert "  |   `..  ' / \\__.'         `.__/ \\ `  ,.'   |\n")
+    (insert "  |    |,\\  /,                     ,\\  /,|    |\n")
+    (insert "  |    ||: : )          .          ( : :||    |\n")
+    (insert " /|    |:; |/  .      ./|\\,      ,  \\| :;|    |\\\n")
+    (insert " \\|.__ |/  :  ,/-    <--:-->    ,\\.  ;  \\| __,|;\n")
+    (insert "  |`-.``:   `'/-.     '\\|/     ,-\\`;   ;'',-'|\n")
+    (insert "  |   `..   ,' `'       '       `  `.   ,.'   |\n")
+    (insert "  |    ||  :                         :  ||    |\n")
+    (insert "  |    ||  |                         |  ||    |\n")
+    (insert "  |    ||  |                         |  ||    |\n")
+    (insert "  |    |'  |            _            |  `|    |\n")
+    (insert "  |    |   |          '|))           |   |    |\n")
+    (insert "  ;____:   `._        `'           _,'   ;____:\n")
+    (insert " {______}     \\___________________/     {______}\n")
+    (insert " |______|_______________________________|______|\n")
+    (insert "         ascii art by Sebastian Stoecker\n"))
+  
+  (message "Doors of Durin art written to: %s" filename))
+
+(defun mellon ()
+  (interactive)
+  (message "The Doors of Durin open... ancient magic awakens!")
+  (sit-for 1.2)
+  (zone))   ; ← drops the user straight into a random trippy screensaver
+
 (use-package dashboard
   :ensure t
   :config
@@ -105,13 +159,20 @@
                           (agenda    . 5)       ; if you use org-agenda
                           (bookmarks . 5)))
 
+  ;; Adjust banner logo font
+  (set-face-attribute 'dashboard-banner-logo-title nil
+                      :family "Vivaldi"
+		      :height 2.0
+                      :weight 'normal)
+  
   ;; Set the title
-  (setq dashboard-banner-logo-title "Welcome to Emacs.")
+  (setq dashboard-banner-logo-title "Speak friend and enter.")
 
-  (setq dashboard-footer-messages '("Speak friend and enter."))
+  ;; Create ascii art for the banner
+  (make-doors-of-durin-ascii-art-file (expand-file-name "doors_of_durin.txt" user-emacs-directory))
 
-  ;; Optional: keep your centered header idea as custom banner
-  ;; (setq dashboard-startup-banner "/path/to/your-big-art.txt")
+  ;; Use the custom ascii art as a banner
+  (setq dashboard-startup-banner (expand-file-name "doors_of_durin.txt" user-emacs-directory))
 
   (dashboard-setup-startup-hook))
 
