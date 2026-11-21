@@ -3,8 +3,13 @@
 ;; Package setup + MELPA
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-(unless (bound-and-true-p package--initialized)
-  (package-initialize))
+(package-initialize)
+
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+
+(require 'use-package)
 
 ;; Make GNU find from Git for Windows available to Emacs
 (add-to-list 'exec-path "C:/Program Files/Git/usr/bin")
