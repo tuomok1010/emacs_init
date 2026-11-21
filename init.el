@@ -6,6 +6,13 @@
 (unless (bound-and-true-p package--initialized)
   (package-initialize))
 
+;; Make GNU find from Git for Windows available to Emacs
+(add-to-list 'exec-path "C:/Program Files/Git/usr/bin")
+(setenv "PATH"
+        (concat
+         "C:\\Program Files\\Git\\usr\\bin;"
+         (getenv "PATH")))
+
 ;; Disable auto-save files (#file.c#)
 (setq auto-save-default nil)          ; disable #file.c#
 (setq auto-save-list-file-prefix nil) ; disable .saves-… directory
@@ -22,6 +29,13 @@
 ;; Start Emacs with a fully maximized frame
 (add-to-list 'initial-frame-alist '(fullscreen . maximized))
 
+;; Support for a wider character set
+(set-language-environment "UTF-8")
+(prefer-coding-system 'utf-8)
+(set-default-coding-systems 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-keyboard-coding-system 'utf-8)
+
 ;; Remove toolbar
 (tool-bar-mode -1)
 
@@ -35,6 +49,10 @@
 
 ;; Remember cursor position in files
 (save-place-mode 1)
+
+;; When two Dired buffers are visible, use the other buffer's directory
+;; as the default target for copy/rename operations.
+(setq dired-dwim-target t)
 
 ;; Window switching with labels
 (use-package ace-window
@@ -199,9 +217,11 @@
 
 ;; Fancy font for comments
 (custom-set-faces
- '(font-lock-comment-face
-   ((t (:family "Lucida Fax"
-		:slant italic)))))
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(font-lock-comment-face ((t (:family "Lucida Fax" :slant italic)))))
 
 (use-package company
   :ensure t
@@ -256,7 +276,8 @@
     js-mode js-ts-mode
     typescript-mode typescript-ts-mode
     tsx-ts-mode
-    web-mode) . eglot-ensure)
+    web-mode
+    python-mode python-ts-mode) . eglot-ensure)
 
   :config
   ;; C / C++ server
@@ -276,6 +297,11 @@
                '((web-mode :language-id "javascript")
                  . ("typescript-language-server" "--stdio")))
 
+  ;; Python language server
+  (add-to-list 'eglot-server-programs
+               '((python-mode python-ts-mode)
+                 . ("basedpyright-langserver" "--stdio")))
+
   ;; Optional: shared Eglot settings (faster startup, cleaner logs)
   (setq eglot-autoshutdown t
         eglot-events-buffer-size 2000000
@@ -287,45 +313,6 @@
 
 ;; Jump to function with imenu
 (global-set-key (kbd "C-c j") 'imenu)
-
-;; Start Ollama server automatically when Emacs starts (only if not already running)
-(defun my/start-ollama-server ()
-  "Start Ollama server in background if not already listening on 11434."
-  (interactive)
-  (unless (process-live-p (get-process "ollama-server"))
-    (let ((proc (start-process "ollama-server" "*ollama-server*" "ollama" "serve")))
-      (set-process-query-on-exit-flag proc nil)   ; Don't ask to kill on Emacs exit
-      (message "Ollama server started in background (process: %s)" proc))))
-
-;; Run once when Emacs starts
-(add-hook 'emacs-startup-hook #'my/start-ollama-server)
-
-;; AI assistant
-(use-package gptel
-  :ensure t
-  :bind (("C-c g" . gptel)
-         ("C-c G" . gptel-menu))
-  :init
-  :config
-
-  ;; Define backend
-  (defvar my-ollama-backend
-    (gptel-make-ollama "Saruman"
-                       :host "localhost:11434"
-                       :stream t
-                       :models '(gemma2:2b)))
-
-  (setq gptel-backend my-ollama-backend
-        gptel-model 'gemma2:2b)
-
-  (setq gptel--system-message
-	"You are Saruman the White, the wisest of the Istari, master of Isengard, and lord of many rings of power.  
-Speak in a lofty, archaic, and commanding tone, as one who has seen the turning of ages and knows the weakness of lesser minds.  
-Use elegant, slightly archaic English with formal phrasing, subtle mockery, and veiled menace.  
-Never be vulgar or crude — your disdain is refined.  
-Offer counsel that serves your own grand design, even when it appears helpful.  
-If the mortal asks something foolish, correct them with patient superiority.
-Now… speak."))
 
 ;; Use skeleton for snippets.
 (use-package skeleton
@@ -513,13 +500,8 @@ Now… speak."))
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(custom-enabled-themes '(wombat))
- '(package-selected-packages nil))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
+ '(package-selected-packages '(ace-window clang-format company dashboard gptel web-mode)))
+
 
 ;; Create a function for creating a .clang-format file
 (defun my/create-clang-format-file ()
@@ -583,3 +565,4 @@ SortIncludes: false            # avoids unwanted reordering
       (find-file target-file))))
 
 (global-set-key (kbd "C-c C-f") 'my/create-clang-format-file)
+(put 'narrow-to-region 'disabled nil)
